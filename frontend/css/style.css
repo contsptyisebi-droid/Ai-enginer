@@ -1,0 +1,372 @@
+/* ── Reset & Base ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0a0a0f;
+  --surface:     #111118;
+  --surface2:    #1a1a24;
+  --border:      #2a2a3a;
+  --accent:      #e8002d;   /* Ferrari red */
+  --accent2:     #ff6b00;   /* warm orange */
+  --green:       #00e676;
+  --yellow:      #ffd600;
+  --text:        #e0e0ef;
+  --muted:       #666680;
+  --font:        'Courier New', Courier, monospace;
+  --radius:      6px;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  overflow-x: hidden;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+header {
+  background: var(--surface);
+  border-bottom: 2px solid var(--accent);
+  padding: 10px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon { font-size: 22px; }
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+.logo-accent { color: var(--accent); }
+
+.status-bar { display: flex; align-items: center; gap: 8px; }
+.status-label { font-size: 11px; color: var(--muted); letter-spacing: 0.12em; }
+.status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-dot.connected    { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.status-dot.disconnected { background: var(--muted); }
+
+/* ── Main layout ──────────────────────────────────────────────────────────── */
+main {
+  display: grid;
+  grid-template-columns: 280px 1fr 260px;
+  gap: 16px;
+  padding: 16px 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: calc(100vh - 58px);
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+/* ── Telemetry panel ──────────────────────────────────────────────────────── */
+.gauge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.gauge {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+.gauge-label {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  margin-bottom: 3px;
+}
+.gauge-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.gauge-value small { font-size: 10px; color: var(--muted); font-weight: normal; }
+
+/* ── Tyre wear ────────────────────────────────────────────────────────────── */
+.wear-section { margin-top: 8px; }
+.wear-title {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.14em;
+  margin-bottom: 8px;
+}
+.wear-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tyre-corner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.corner-label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; }
+.wear-bar-track {
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.wear-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  border-radius: 4px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.wear-pct { font-size: 11px; font-weight: 700; }
+
+/* ── Radio panel ──────────────────────────────────────────────────────────── */
+.radio-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.radio-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.radio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.radio-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+}
+.radio-state-label {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+.radio-state-label.recording { color: var(--accent); animation: pulse 0.8s infinite alternate; }
+.radio-state-label.processing { color: var(--yellow); }
+.radio-state-label.playing   { color: var(--green);  }
+
+.radio-display {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  min-height: 90px;
+}
+.waveform-container { display: flex; justify-content: center; margin-bottom: 8px; }
+#waveform { display: block; }
+
+.transcript {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 20px;
+  font-style: italic;
+}
+
+/* ── PTT button ───────────────────────────────────────────────────────────── */
+.ptt-btn {
+  width: 100%;
+  padding: 20px;
+  background: var(--surface2);
+  border: 3px solid var(--accent);
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  user-select: none;
+  touch-action: none;
+}
+.ptt-btn:hover { background: #1e1e2a; }
+.ptt-btn.active {
+  background: var(--accent);
+  box-shadow: 0 0 20px rgba(232, 0, 45, 0.6);
+  transform: scale(0.98);
+}
+.ptt-icon { font-size: 28px; }
+.ptt-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--text);
+}
+
+.ptt-hint {
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: var(--font);
+}
+
+/* ── Engineer reply ───────────────────────────────────────────────────────── */
+.engineer-reply-section {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+.engineer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.engineer-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--green);
+}
+.engineer-state { font-size: 10px; color: var(--muted); }
+.engineer-reply {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  min-height: 36px;
+}
+
+/* ── Damage panel ─────────────────────────────────────────────────────────── */
+.damage-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.damage-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.damage-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
+.damage-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  min-width: 36px;
+  text-align: right;
+}
+.damage-value.warn    { color: var(--yellow); }
+.damage-value.critical { color: var(--accent); }
+
+/* ── Fault badges ─────────────────────────────────────────────────────────── */
+.fault-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.fault-badge {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: background 0.3s, color 0.3s;
+}
+.fault-badge.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  animation: pulse 0.8s infinite alternate;
+}
+
+/* ── Penalties ────────────────────────────────────────────────────────────── */
+.penalties-section {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.pen-item {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  text-align: center;
+}
+.pen-label { font-size: 9px; color: var(--muted); display: block; margin-bottom: 2px; }
+.pen-value { font-size: 16px; font-weight: 700; }
+
+/* ── Delta times ──────────────────────────────────────────────────────────── */
+.delta-section { display: flex; gap: 8px; }
+.delta-item {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  text-align: center;
+}
+.delta-label { font-size: 9px; color: var(--muted); display: block; margin-bottom: 2px; }
+.delta-value { font-size: 14px; font-weight: 700; }
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes pulse {
+  from { opacity: 1; }
+  to   { opacity: 0.5; }
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+}
