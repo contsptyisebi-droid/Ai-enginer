@@ -79,7 +79,7 @@ async def _anthropic_chat(user_content: str) -> str:
                     "Anthropic rate limit exceeded. Please wait a moment and try again."
                 ) from exc
             raise ValueError(
-                f"Anthropic API error ({status}): {detail}"
+                f"Anthropic API error ({status}). Please check your configuration and try again."
             ) from exc
 
         data = response.json()

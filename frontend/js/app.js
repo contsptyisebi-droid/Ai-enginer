@@ -321,14 +321,15 @@ async function stopRecording() {
   } catch (err) {
     console.error('Voice API error:', err);
     const msg = err.message || '';
-    if (msg.includes('API key'))        engineerReplyEl.textContent = '⚠ ' + msg;
-    else if (msg.includes('rate limit')) engineerReplyEl.textContent = '⚠ Rate limit – wait a moment.';
-    else if (msg.includes('Server error')) {
-      // Try to extract the detail from the server error message
-      const detail = msg.replace(/^Server error \d+:\s*/, '').replace(/^{"detail":"(.*)"}$/, '$1');
-      engineerReplyEl.textContent = '⚠ ' + (detail || 'Communication error – check API key.');
+    let displayMsg = 'Communication error – check API key.';
+    if (msg.includes('Server error')) {
+      try {
+        const jsonPart = msg.substring(msg.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        if (parsed.detail) displayMsg = parsed.detail;
+      } catch { /* use default */ }
     }
-    else                                engineerReplyEl.textContent = '⚠ Communication error – check API key.';
+    engineerReplyEl.textContent = '⚠ ' + displayMsg;
     setRadioState('STANDBY');
   }
 }
@@ -360,17 +361,14 @@ window.addEventListener('keyup', (e) => {
 
 // ─── Focus detection ──────────────────────────────────────────────────────────
 const focusWarning = document.getElementById('focus-warning');
-document.addEventListener('visibilitychange', () => {
+function updateFocusWarning() {
   if (focusWarning) {
-    focusWarning.style.display = document.hidden ? 'block' : 'none';
+    focusWarning.style.display = (document.hidden || !document.hasFocus()) ? 'block' : 'none';
   }
-});
-window.addEventListener('blur', () => {
-  if (focusWarning) focusWarning.style.display = 'block';
-});
-window.addEventListener('focus', () => {
-  if (focusWarning) focusWarning.style.display = 'none';
-});
+}
+document.addEventListener('visibilitychange', updateFocusWarning);
+window.addEventListener('blur', updateFocusWarning);
+window.addEventListener('focus', updateFocusWarning);
 
 // ─── Live telemetry polling ───────────────────────────────────────────────────
 async function pollTelemetry() {
