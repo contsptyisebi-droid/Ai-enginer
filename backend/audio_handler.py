@@ -111,21 +111,33 @@ async def _transcribe_openai(audio_bytes: bytes, content_type: str) -> str:
         return response.json().get("text", "").strip()
 
 
-def _transcribe_local_sync(audio_bytes: bytes) -> str:
+def _transcribe_local_sync(audio_bytes: bytes, content_type: str) -> str:
     """Run faster-whisper transcription (blocking). Called via asyncio executor."""
     model = _get_whisper_model()
 
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp:
+    ext_map = {
+        "audio/webm": ".webm",
+        "audio/ogg":  ".ogg",
+        "audio/mp4":  ".mp4",
+        "audio/mpeg": ".mp3",
+        "audio/wav":  ".wav",
+        "audio/flac": ".flac",
+    }
+    suffix = ext_map.get(content_type.split(";")[0].strip(), ".webm")
+
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=True) as tmp:
         tmp.write(audio_bytes)
         tmp.flush()
         segments, _info = model.transcribe(tmp.name, beam_size=5)
         return " ".join(seg.text.strip() for seg in segments).strip()
 
 
-async def _transcribe_local(audio_bytes: bytes) -> str:
+async def _transcribe_local(audio_bytes: bytes, content_type: str) -> str:
     """Transcribe using the local faster-whisper model (non-blocking wrapper)."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _transcribe_local_sync, audio_bytes)
+    return await loop.run_in_executor(
+        None, _transcribe_local_sync, audio_bytes, content_type
+    )
 
 
 # ── TTS helpers ───────────────────────────────────────────────────────────────
@@ -161,11 +173,11 @@ async def _synthesize_edge_tts(text: str) -> bytes:
     import edge_tts
 
     communicate = edge_tts.Communicate(text, EDGE_TTS_VOICE)
-    buffer = io.BytesIO()
+    audio_buffer = io.BytesIO()
     async for chunk in communicate.stream():
         if chunk["type"] == "audio":
-            buffer.write(chunk["data"])
-    return buffer.getvalue()
+            audio_buffer.write(chunk["data"])
+    return audio_buffer.getvalue()
 
 
 # ─── Public API (unchanged signatures) ───────────────────────────────────────
@@ -173,7 +185,7 @@ async def _synthesize_edge_tts(text: str) -> bytes:
 async def transcribe_audio(audio_bytes: bytes, content_type: str = "audio/webm") -> str:
     """Transcribe speech from raw audio bytes. Provider chosen by STT_PROVIDER."""
     if STT_PROVIDER == "local":
-        return await _transcribe_local(audio_bytes)
+        return await _transcribe_local(audio_bytes, content_type)
     return await _transcribe_openai(audio_bytes, content_type)
 
 
