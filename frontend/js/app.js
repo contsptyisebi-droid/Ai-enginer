@@ -422,10 +422,9 @@ async function pollTelemetry() {
     setDmg('d-engine',    d.engine_dmg);
 
     // Fault badges
-    setFault('fault-drs',    d.drs_fault);
-    setFault('fault-ers',    d.ers_fault);
-    setFault('fault-blown',  d.engine_blown);
-    setFault('fault-seized', d.engine_seized);
+    setFault('fault-drs',        d.drs_fault);
+    setFault('fault-ers-health', d.ers_energy_store_health < 50);
+    setFault('fault-engine',     d.engine_dmg > 50);
 
     // Penalties
     setText('p-penalties', d.penalties_sec > 0 ? `${d.penalties_sec}s` : '0s');
