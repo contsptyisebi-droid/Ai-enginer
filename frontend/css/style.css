@@ -248,6 +248,19 @@ kbd {
   font-family: var(--font);
 }
 
+/* ── Focus warning ───────────────────────────────────────────────────────── */
+.focus-warning {
+  text-align: center;
+  font-size: 11px;
+  color: var(--yellow);
+  background: rgba(255, 200, 0, 0.08);
+  border: 1px solid var(--yellow);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  margin-top: 8px;
+  letter-spacing: 0.04em;
+}
+
 /* ── Engineer reply ───────────────────────────────────────────────────────── */
 .engineer-reply-section {
   background: var(--surface2);

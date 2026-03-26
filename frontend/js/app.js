@@ -320,7 +320,15 @@ async function stopRecording() {
 
   } catch (err) {
     console.error('Voice API error:', err);
-    engineerReplyEl.textContent = '⚠ Communication error – check API key.';
+    const msg = err.message || '';
+    if (msg.includes('API key'))        engineerReplyEl.textContent = '⚠ ' + msg;
+    else if (msg.includes('rate limit')) engineerReplyEl.textContent = '⚠ Rate limit – wait a moment.';
+    else if (msg.includes('Server error')) {
+      // Try to extract the detail from the server error message
+      const detail = msg.replace(/^Server error \d+:\s*/, '').replace(/^{"detail":"(.*)"}$/, '$1');
+      engineerReplyEl.textContent = '⚠ ' + (detail || 'Communication error – check API key.');
+    }
+    else                                engineerReplyEl.textContent = '⚠ Communication error – check API key.';
     setRadioState('STANDBY');
   }
 }
@@ -336,18 +344,32 @@ pttBtn.addEventListener('pointerdown',  (e) => { e.preventDefault(); startRecord
 pttBtn.addEventListener('pointerup',    (e) => { e.preventDefault(); stopRecording();  });
 pttBtn.addEventListener('pointerleave', (e) => { if (isRecording) stopRecording();     });
 
-// Keyboard shortcut: Space bar
+// Keyboard shortcut: Space bar (and backtick ` as alternative for when game uses Space)
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && !e.repeat && !isRecording) {
+  if ((e.code === 'Space' || e.code === 'Backquote') && !e.repeat && !isRecording) {
     e.preventDefault();
     startRecording();
   }
 });
 window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space' && isRecording) {
+  if ((e.code === 'Space' || e.code === 'Backquote') && isRecording) {
     e.preventDefault();
     stopRecording();
   }
+});
+
+// ─── Focus detection ──────────────────────────────────────────────────────────
+const focusWarning = document.getElementById('focus-warning');
+document.addEventListener('visibilitychange', () => {
+  if (focusWarning) {
+    focusWarning.style.display = document.hidden ? 'block' : 'none';
+  }
+});
+window.addEventListener('blur', () => {
+  if (focusWarning) focusWarning.style.display = 'block';
+});
+window.addEventListener('focus', () => {
+  if (focusWarning) focusWarning.style.display = 'none';
 });
 
 // ─── Live telemetry polling ───────────────────────────────────────────────────
