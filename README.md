@@ -13,7 +13,7 @@ Talk to your AI engineer via a Push-to-Talk radio interface. The engineer answer
 | **Live Telemetry** | UDP listener on port 20777 decodes F1 25 packets (tyre wear, temps, fuel, ERS, damage, position) |
 | **Push-to-Talk Radio** | Hold the button (or Space bar) to speak |
 | **Speech-to-Text** | OpenAI Whisper transcribes your voice |
-| **Context-aware LLM** | GPT-4o receives your question + live telemetry snapshot |
+| **Context-aware LLM** | GPT-4o or Claude Haiku receives your question + live telemetry snapshot |
 | **Text-to-Speech** | OpenAI TTS generates the engineer's reply in a deep authoritative voice |
 | **Radio Effect** | Web Audio API bandpass filter + distortion gives authentic two-way radio sound |
 | **Radio Beeps** | Synthesised open/close beeps on every transmission |
@@ -30,7 +30,7 @@ Ai-enginer/
 │   ├── main.py            # FastAPI app – API routes & static file serving
 │   ├── telemetry.py       # UDP listener + F1 25 packet decoder
 │   ├── audio_handler.py   # Whisper STT + OpenAI TTS
-│   └── llm_handler.py     # GPT-4o with telemetry context injection
+│   └── llm_handler.py     # GPT-4o / Claude with telemetry context injection
 ├── frontend/
 │   ├── index.html         # Main UI
 │   ├── css/style.css      # F1-themed dark UI
@@ -47,7 +47,8 @@ Ai-enginer/
 ### 1. Prerequisites
 
 - Python 3.11+
-- An [OpenAI API key](https://platform.openai.com/api-keys)
+- An [OpenAI API key](https://platform.openai.com/api-keys) (always required for STT & TTS)
+- *(Optional)* An [Anthropic API key](https://console.anthropic.com/) to use Claude as the LLM
 - EA Sports F1 25 with UDP telemetry enabled
 
 ### 2. Enable UDP Telemetry in F1 25
@@ -73,6 +74,7 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 # Edit .env and set your OPENAI_API_KEY
+# Optionally set ANTHROPIC_API_KEY to use Claude (Haiku) as the LLM
 ```
 
 ### 5. Run the application
@@ -114,7 +116,7 @@ Open your browser at **http://localhost:8000**
 ## Tech Stack
 
 - **Backend**: Python · FastAPI · httpx
-- **AI**: OpenAI Whisper (STT) · GPT-4o (LLM) · OpenAI TTS
+- **AI**: OpenAI Whisper (STT) · GPT-4o *or* Anthropic Claude (LLM) · OpenAI TTS
 - **Telemetry**: Custom UDP decoder for F1 25 packet format
 - **Frontend**: Vanilla JS · Web Audio API · CSS Grid
 
