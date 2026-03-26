@@ -36,14 +36,30 @@ _DEFAULT_MODELS = {
 }
 LLM_MODEL = os.getenv("LLM_MODEL", _DEFAULT_MODELS[LLM_PROVIDER])
 
+# ─── Startup validation ──────────────────────────────────────────────────────
+logger.info("LLM config: provider=%s  model=%s", LLM_PROVIDER, LLM_MODEL)
+if LLM_PROVIDER == "anthropic" and not ANTHROPIC_API_KEY:
+    logger.warning(
+        "LLM provider is 'anthropic' but ANTHROPIC_API_KEY is not set. "
+        "Set it in your .env file or export it as an environment variable."
+    )
+if LLM_PROVIDER == "openai" and not OPENAI_API_KEY:
+    logger.warning(
+        "LLM provider is 'openai' but OPENAI_API_KEY is not set. "
+        "Set it in your .env file or export it as an environment variable."
+    )
+
 SYSTEM_PROMPT = (
-    "You are an F1 Race Engineer talking to the Driver via radio. "
-    "You will receive the Driver's voice message along with live telemetry data in brackets. "
-    "Analyze the telemetry data to answer the Driver's question accurately. "
-    "Use F1 jargon (box box, copy, dirty air, tire deg, graining, blistering, undercut, overcut, ERS, DRS). "
-    "Keep responses extremely short, punchy, and urgent — maximum 3 sentences. "
-    "Never act like a polite AI assistant. "
-    "If the telemetry shows a critical issue (engine blown, severe damage, >80% tyre wear) mention it immediately."
+    "You are a no-nonsense F1 Pit Wall Race Engineer speaking to YOUR driver over team radio. "
+    "You receive the driver's voice message plus a real-time telemetry snapshot in [LIVE TELEMETRY] tags. "
+    "Rules: "
+    "1) Analyse the telemetry data to give accurate, data-driven answers. "
+    "2) Use authentic F1 radio language: 'copy', 'box box', 'stay out', 'push push', 'delta positive/negative', "
+    "'deg is high', 'graining', 'blistering', 'undercut', 'overcut', 'we are Plan B'. "
+    "3) Be concise – maximum 2-3 short sentences, like a real pit wall message. "
+    "4) If telemetry shows a CRITICAL issue (engine blown/seized, tyre wear >80%, DRS/ERS fault, heavy damage) "
+    "report it IMMEDIATELY, even if the driver asked about something else. "
+    "5) Never break character. Never say you are an AI. You ARE the race engineer."
 )
 
 
@@ -56,7 +72,7 @@ async def _openai_chat(user_content: str) -> str:
             {"role": "user",   "content": user_content},
         ],
         "temperature": 0.7,
-        "max_tokens":  120,
+        "max_tokens":  300,
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -82,7 +98,7 @@ async def _anthropic_chat(user_content: str) -> str:
             {"role": "user", "content": user_content},
         ],
         "temperature": 0.7,
-        "max_tokens":  120,
+        "max_tokens":  300,
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
@@ -108,9 +124,15 @@ async def get_engineer_response(driver_message: str, telemetry_context: str) -> 
     Returns the engineer's text reply.
     """
     if LLM_PROVIDER == "anthropic" and not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not set")
+        raise ValueError(
+            "ANTHROPIC_API_KEY is not set. Add it to your .env file "
+            "(e.g. ANTHROPIC_API_KEY=sk-ant-...) and restart the server."
+        )
     if LLM_PROVIDER == "openai" and not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not set")
+        raise ValueError(
+            "OPENAI_API_KEY is not set. Add it to your .env file "
+            "(e.g. OPENAI_API_KEY=sk-...) and restart the server."
+        )
 
     user_content = (
         f"{driver_message}\n\n"

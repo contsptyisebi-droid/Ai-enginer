@@ -4,7 +4,6 @@ Audio handler: Speech-to-Text (OpenAI Whisper) and Text-to-Speech (OpenAI TTS).
 
 import logging
 import os
-import tempfile
 
 import httpx
 
@@ -16,11 +15,20 @@ WHISPER_MODEL = "whisper-1"
 TTS_MODEL     = "tts-1"
 TTS_VOICE     = os.getenv("TTS_VOICE", "onyx")   # onyx sounds authoritative – good for race engineer
 
+if not OPENAI_API_KEY:
+    logger.warning(
+        "OPENAI_API_KEY is not set – Speech-to-Text (Whisper) and Text-to-Speech "
+        "will not work. Add it to your .env file and restart the server."
+    )
+
 
 async def transcribe_audio(audio_bytes: bytes, content_type: str = "audio/webm") -> str:
     """Send raw audio bytes to OpenAI Whisper and return the transcription."""
     if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not set")
+        raise ValueError(
+            "OPENAI_API_KEY is not set – required for Whisper speech-to-text. "
+            "Add it to your .env file and restart the server."
+        )
 
     # Determine file extension from content type
     ext_map = {
@@ -49,7 +57,10 @@ async def transcribe_audio(audio_bytes: bytes, content_type: str = "audio/webm")
 async def synthesize_speech(text: str) -> bytes:
     """Convert text to speech using OpenAI TTS. Returns raw MP3 bytes."""
     if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not set")
+        raise ValueError(
+            "OPENAI_API_KEY is not set – required for TTS speech synthesis. "
+            "Add it to your .env file and restart the server."
+        )
 
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
