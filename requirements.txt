@@ -13,3 +13,9 @@ python-dotenv==1.0.1
 
 # Multipart form parsing (required by FastAPI for file uploads)
 python-multipart==0.0.22
+
+# Local Speech-to-Text (whisper.cpp via CTranslate2) – used when STT_PROVIDER=local
+faster-whisper==1.1.1
+
+# Local Text-to-Speech (Microsoft Edge TTS, free, no API key) – used when TTS_PROVIDER=edge-tts
+edge-tts==7.0.2
