@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scuderia AI – F1 Race Engineer</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🏎</span>
+        <span class="logo-text">SCUDERIA <span class="logo-accent">AI</span></span>
+      </div>
+      <div class="status-bar">
+        <span id="telemetry-status" class="status-dot disconnected" title="Telemetry"></span>
+        <span class="status-label">TELEMETRY</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main>
+    <!-- Left: Telemetry gauges -->
+    <section class="panel telemetry-panel">
+      <h2 class="panel-title">LIVE TELEMETRY</h2>
+      <div class="gauge-grid">
+        <div class="gauge">
+          <div class="gauge-label">POSITION</div>
+          <div class="gauge-value" id="t-position">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">LAP</div>
+          <div class="gauge-value" id="t-lap">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">SPEED</div>
+          <div class="gauge-value" id="t-speed">–<small> km/h</small></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">GEAR</div>
+          <div class="gauge-value" id="t-gear">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">TYRE</div>
+          <div class="gauge-value" id="t-tyre">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">TYRE AGE</div>
+          <div class="gauge-value" id="t-tyre-age">–<small> laps</small></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">FUEL</div>
+          <div class="gauge-value" id="t-fuel">–<small> kg</small></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">FUEL δ</div>
+          <div class="gauge-value" id="t-fuel-delta">–<small> laps</small></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">ERS</div>
+          <div class="gauge-value" id="t-ers">–<small>%</small></div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">ERS MODE</div>
+          <div class="gauge-value" id="t-ers-mode">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">DRS</div>
+          <div class="gauge-value" id="t-drs">–</div>
+        </div>
+        <div class="gauge">
+          <div class="gauge-label">FLAG</div>
+          <div class="gauge-value" id="t-flag">–</div>
+        </div>
+      </div>
+
+      <!-- Tyre wear bars -->
+      <div class="wear-section">
+        <div class="wear-title">TYRE WEAR</div>
+        <div class="wear-grid">
+          <div class="tyre-corner">
+            <div class="corner-label">FL</div>
+            <div class="wear-bar-track"><div class="wear-bar" id="wear-fl"></div></div>
+            <div class="wear-pct" id="wear-fl-pct">0%</div>
+          </div>
+          <div class="tyre-corner">
+            <div class="corner-label">FR</div>
+            <div class="wear-bar-track"><div class="wear-bar" id="wear-fr"></div></div>
+            <div class="wear-pct" id="wear-fr-pct">0%</div>
+          </div>
+          <div class="tyre-corner">
+            <div class="corner-label">RL</div>
+            <div class="wear-bar-track"><div class="wear-bar" id="wear-rl"></div></div>
+            <div class="wear-pct" id="wear-rl-pct">0%</div>
+          </div>
+          <div class="tyre-corner">
+            <div class="corner-label">RR</div>
+            <div class="wear-bar-track"><div class="wear-bar" id="wear-rr"></div></div>
+            <div class="wear-pct" id="wear-rr-pct">0%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Centre: PTT radio -->
+    <section class="panel radio-panel">
+      <div class="radio-container">
+        <div class="radio-header">
+          <span class="radio-label">DRIVER RADIO</span>
+          <span id="radio-state-label" class="radio-state-label">STANDBY</span>
+        </div>
+
+        <div class="radio-display">
+          <div id="waveform-container" class="waveform-container">
+            <canvas id="waveform" width="260" height="60"></canvas>
+          </div>
+          <div id="transcript" class="transcript"></div>
+        </div>
+
+        <!-- PTT button -->
+        <button
+          id="ptt-btn"
+          class="ptt-btn"
+          aria-label="Push to Talk – hold to speak"
+        >
+          <span class="ptt-icon">🎙</span>
+          <span class="ptt-text">PUSH TO TALK</span>
+        </button>
+
+        <div class="ptt-hint">Hold button or hold <kbd>Space</kbd></div>
+
+        <!-- Engineer reply -->
+        <div class="engineer-reply-section">
+          <div class="engineer-header">
+            <span class="engineer-label">⚡ ENGINEER</span>
+            <span id="engineer-state" class="engineer-state"></span>
+          </div>
+          <div id="engineer-reply" class="engineer-reply"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Damage panel -->
+    <section class="panel damage-panel">
+      <h2 class="panel-title">CAR DAMAGE</h2>
+      <div class="damage-grid">
+        <div class="damage-item">
+          <span class="damage-label">FRONT-LEFT WING</span>
+          <span class="damage-value" id="d-fl-wing">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">FRONT-RIGHT WING</span>
+          <span class="damage-value" id="d-fr-wing">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">REAR WING</span>
+          <span class="damage-value" id="d-rear-wing">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">FLOOR</span>
+          <span class="damage-value" id="d-floor">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">DIFFUSER</span>
+          <span class="damage-value" id="d-diffuser">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">SIDEPOD</span>
+          <span class="damage-value" id="d-sidepod">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">GEARBOX</span>
+          <span class="damage-value" id="d-gearbox">0%</span>
+        </div>
+        <div class="damage-item">
+          <span class="damage-label">ENGINE</span>
+          <span class="damage-value" id="d-engine">0%</span>
+        </div>
+      </div>
+
+      <!-- Fault indicators -->
+      <div class="fault-section">
+        <div class="fault-badge" id="fault-drs">DRS</div>
+        <div class="fault-badge" id="fault-ers">ERS</div>
+        <div class="fault-badge" id="fault-blown">ENGINE BLOWN</div>
+        <div class="fault-badge" id="fault-seized">ENGINE SEIZED</div>
+      </div>
+
+      <!-- Penalties -->
+      <div class="penalties-section">
+        <div class="pen-item">
+          <span class="pen-label">PENALTIES</span>
+          <span class="pen-value" id="p-penalties">0s</span>
+        </div>
+        <div class="pen-item">
+          <span class="pen-label">WARNINGS</span>
+          <span class="pen-value" id="p-warnings">0</span>
+        </div>
+        <div class="pen-item">
+          <span class="pen-label">PIT STOPS</span>
+          <span class="pen-value" id="p-pitstops">0</span>
+        </div>
+      </div>
+
+      <div id="delta-section" class="delta-section">
+        <div class="delta-item">
+          <span class="delta-label">Δ LEADER</span>
+          <span class="delta-value" id="delta-leader">–</span>
+        </div>
+        <div class="delta-item">
+          <span class="delta-label">Δ AHEAD</span>
+          <span class="delta-value" id="delta-ahead">–</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
