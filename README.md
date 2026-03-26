@@ -42,40 +42,58 @@ Ai-enginer/
 
 ---
 
-## Setup
+## Quick Start
 
 ### 1. Prerequisites
 
-- Python 3.11+
-- An [OpenAI API key](https://platform.openai.com/api-keys) (always required for STT & TTS)
-- *(Optional)* An [Anthropic API key](https://console.anthropic.com/) to use Claude as the LLM
-- EA Sports F1 25 with UDP telemetry enabled
+- **Python 3.11+**
+- An **[OpenAI API key](https://platform.openai.com/api-keys)** – always required for voice (Whisper STT & TTS)
+- *(Recommended)* An **[Anthropic API key](https://console.anthropic.com/settings/keys)** – for Claude as the LLM (otherwise GPT-4o is used)
+- **EA Sports F1 25** with UDP telemetry enabled
 
-### 2. Enable UDP Telemetry in F1 25
-
-In-game: **Settings → Telemetry Settings**
-- **UDP Telemetry**: On
-- **UDP Broadcast Mode**: Off
-- **UDP IP Address**: 127.0.0.1
-- **UDP Port**: 20777
-- **UDP Send Rate**: 60Hz (recommended)
-- **UDP Format**: 2025
-
-### 3. Install Python dependencies
+### 2. Install Python dependencies
 
 ```bash
+# Create a virtual environment (recommended)
 python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
+source .venv/bin/activate      # macOS / Linux
+# .venv\Scripts\activate       # Windows
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment
+### 3. Configure your API keys
 
 ```bash
+# Copy the example env file
 cp .env.example .env
-# Edit .env and set your OPENAI_API_KEY
-# Optionally set ANTHROPIC_API_KEY to use Claude (Haiku) as the LLM
 ```
+
+Edit `.env` and set your keys:
+
+```dotenv
+# REQUIRED – needed for Whisper speech-to-text and TTS
+OPENAI_API_KEY=sk-proj-...your-key-here...
+
+# RECOMMENDED – use Claude as the LLM (auto-detected when set)
+ANTHROPIC_API_KEY=sk-ant-...your-key-here...
+```
+
+> **Claude-only setup:** Set both keys. OpenAI handles voice (STT/TTS) while Claude handles the AI reasoning. The app auto-detects which LLM to use based on which keys are present.
+
+### 4. Enable UDP Telemetry in F1 25
+
+In-game: **Settings → Telemetry Settings**
+
+| Setting | Value |
+|---|---|
+| UDP Telemetry | **On** |
+| UDP Broadcast Mode | **Off** |
+| UDP IP Address | **127.0.0.1** |
+| UDP Port | **20777** |
+| UDP Send Rate | **60Hz** (recommended) |
+| UDP Format | **2025** |
 
 ### 5. Run the application
 
@@ -104,6 +122,21 @@ Open your browser at **http://localhost:8000**
 
 ---
 
+## Configuration Reference
+
+| Environment Variable | Required | Default | Description |
+|---|---|---|---|
+| `OPENAI_API_KEY` | **Yes** | – | OpenAI key for Whisper STT & TTS (also LLM if no Anthropic key) |
+| `ANTHROPIC_API_KEY` | No | – | Anthropic key for Claude LLM |
+| `LLM_PROVIDER` | No | auto-detect | `"openai"` or `"anthropic"` – overrides auto-detection |
+| `LLM_MODEL` | No | see below | Model name override |
+| `TTS_VOICE` | No | `onyx` | TTS voice: alloy, echo, fable, onyx, nova, shimmer |
+| `UDP_BIND_ADDRESS` | No | `127.0.0.1` | UDP listen address (`0.0.0.0` for LAN) |
+
+**Default LLM models:** GPT-4o (OpenAI) · Claude 3.5 Haiku (Anthropic)
+
+---
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
@@ -113,9 +146,21 @@ Open your browser at **http://localhost:8000**
 
 ---
 
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `OPENAI_API_KEY is not set` error | Make sure you copied `.env.example` to `.env` and filled in your key |
+| `ANTHROPIC_API_KEY is not set` error | Add your Claude key to `.env`, or remove `LLM_PROVIDER=anthropic` to use OpenAI |
+| Telemetry dot stays grey | Check F1 25 UDP settings – telemetry must be **On**, port **20777**, IP **127.0.0.1** |
+| Microphone not working | Allow microphone access in your browser when prompted |
+| No audio playback | Click anywhere on the page first (browsers block autoplay until user interaction) |
+
+---
+
 ## Tech Stack
 
-- **Backend**: Python · FastAPI · httpx
+- **Backend**: Python · FastAPI · httpx · python-dotenv
 - **AI**: OpenAI Whisper (STT) · GPT-4o *or* Anthropic Claude (LLM) · OpenAI TTS
 - **Telemetry**: Custom UDP decoder for F1 25 packet format
 - **Frontend**: Vanilla JS · Web Audio API · CSS Grid
