@@ -12,9 +12,9 @@ Talk to your AI engineer via a Push-to-Talk radio interface. The engineer answer
 |---|---|
 | **Live Telemetry** | UDP listener on port 20777 decodes F1 25 packets (tyre wear, temps, fuel, ERS, damage, position) |
 | **Push-to-Talk Radio** | Hold the button (or Space bar) to speak |
-| **Speech-to-Text** | OpenAI Whisper transcribes your voice |
+| **Speech-to-Text** | OpenAI Whisper API **or** local faster-whisper (whisper.cpp) transcribes your voice |
 | **Context-aware LLM** | Claude Haiku receives your question + live telemetry snapshot |
-| **Text-to-Speech** | OpenAI TTS generates the engineer's reply in a deep authoritative voice |
+| **Text-to-Speech** | OpenAI TTS **or** Edge-TTS (free, no API key) generates the engineer's reply in a deep authoritative voice |
 | **Radio Effect** | Web Audio API bandpass filter + distortion gives authentic two-way radio sound |
 | **Radio Beeps** | Synthesised open/close beeps on every transmission |
 | **Damage Panel** | Wing, floor, diffuser, gearbox, engine damage at a glance |
@@ -48,7 +48,7 @@ Ai-enginer/
 
 - **Python 3.11+**
 - An **[Anthropic API key](https://console.anthropic.com/settings/keys)** – required for Claude (the LLM)
-- An **[OpenAI API key](https://platform.openai.com/api-keys)** – required for voice (Whisper STT & TTS)
+- An **[OpenAI API key](https://platform.openai.com/api-keys)** – required only when using OpenAI voice providers (see *Local Providers* below)
 - **EA Sports F1 25** with UDP telemetry enabled
 
 ### 2. Install Python dependencies
@@ -76,11 +76,30 @@ Edit `.env` and set your keys:
 # REQUIRED – needed for Claude (AI reasoning / LLM)
 ANTHROPIC_API_KEY=sk-ant-...your-key-here...
 
-# REQUIRED – needed for Whisper speech-to-text and TTS
+# Needed ONLY when using OpenAI providers (the default).
+# Leave blank if you use local providers below.
 OPENAI_API_KEY=sk-proj-...your-key-here...
 ```
 
-> **How it works:** Claude handles the AI reasoning (LLM) while OpenAI handles voice (STT/TTS).
+#### Option A – Use OpenAI voice (default, requires `OPENAI_API_KEY`)
+
+No extra configuration needed. Claude handles the AI reasoning (LLM) while OpenAI handles voice (STT/TTS).
+
+#### Option B – Use local / free voice providers (no OpenAI key needed)
+
+Add these lines to your `.env` to run STT and TTS without an OpenAI API key:
+
+```dotenv
+# Use faster-whisper (whisper.cpp) for speech-to-text
+STT_PROVIDER=local
+WHISPER_MODEL_SIZE=base        # tiny | base | small | medium | large-v3
+
+# Use Microsoft Edge TTS for text-to-speech (free, no API key)
+TTS_PROVIDER=edge-tts
+EDGE_TTS_VOICE=en-GB-RyanNeural  # run `edge-tts --list-voices` for options
+```
+
+> **Note:** The local Whisper model is downloaded automatically on first use (~150 MB for `base`).
 
 ### 4. Enable UDP Telemetry in F1 25
 
@@ -127,9 +146,14 @@ Open your browser at **http://localhost:8000**
 | Environment Variable | Required | Default | Description |
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | **Yes** | – | Anthropic key for Claude LLM |
-| `OPENAI_API_KEY` | **Yes** | – | OpenAI key for Whisper STT & TTS |
+| `OPENAI_API_KEY` | Only if using OpenAI providers | – | OpenAI key for Whisper STT & TTS |
+| `STT_PROVIDER` | No | `openai` | STT provider: `openai` or `local` (faster-whisper) |
+| `TTS_PROVIDER` | No | `openai` | TTS provider: `openai` or `edge-tts` |
+| `WHISPER_MODEL_SIZE` | No | `base` | Local Whisper model: `tiny`, `base`, `small`, `medium`, `large-v3` |
+| `WHISPER_DEVICE` | No | `auto` | Compute device for local Whisper: `auto`, `cpu`, `cuda` |
+| `EDGE_TTS_VOICE` | No | `en-GB-RyanNeural` | Edge-TTS voice name (run `edge-tts --list-voices`) |
 | `LLM_MODEL` | No | `claude-3-5-haiku-20241022` | Claude model name override |
-| `TTS_VOICE` | No | `onyx` | TTS voice: alloy, echo, fable, onyx, nova, shimmer |
+| `TTS_VOICE` | No | `onyx` | OpenAI TTS voice: alloy, echo, fable, onyx, nova, shimmer |
 | `UDP_BIND_ADDRESS` | No | `127.0.0.1` | UDP listen address (`0.0.0.0` for LAN) |
 
 **Default LLM model:** Claude 3.5 Haiku
@@ -150,7 +174,7 @@ Open your browser at **http://localhost:8000**
 | Problem | Solution |
 |---|---|
 | `ANTHROPIC_API_KEY is not set` error | Add your Claude key to `.env` |
-| `OPENAI_API_KEY is not set` error | Make sure you copied `.env.example` to `.env` and filled in your key |
+| `OPENAI_API_KEY is not set` error | Add your OpenAI key to `.env`, or switch to local providers (`STT_PROVIDER=local`, `TTS_PROVIDER=edge-tts`) |
 | Telemetry dot stays grey | Check F1 25 UDP settings – telemetry must be **On**, port **20777**, IP **127.0.0.1** |
 | Microphone not working | Allow microphone access in your browser when prompted |
 | No audio playback | Click anywhere on the page first (browsers block autoplay until user interaction) |
@@ -160,7 +184,7 @@ Open your browser at **http://localhost:8000**
 ## Tech Stack
 
 - **Backend**: Python · FastAPI · httpx · python-dotenv
-- **AI**: Anthropic Claude (LLM) · OpenAI Whisper (STT) · OpenAI TTS
+- **AI**: Anthropic Claude (LLM) · OpenAI Whisper or faster-whisper (STT) · OpenAI TTS or Edge-TTS
 - **Telemetry**: Custom UDP decoder for F1 25 packet format
 - **Frontend**: Vanilla JS · Web Audio API · CSS Grid
 
