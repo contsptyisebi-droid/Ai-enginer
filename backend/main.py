@@ -65,7 +65,7 @@ async def voice_endpoint(request: Request, audio: UploadFile = File(...)):
     Accepts a multipart audio file from the PTT button.
     1. Transcribes via Whisper
     2. Merges with live telemetry snapshot
-    3. Queries GPT-4o
+    3. Queries Claude
     4. Synthesises TTS reply
     Returns: MP3 audio bytes + metadata headers
     """

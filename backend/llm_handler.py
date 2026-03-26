@@ -1,11 +1,5 @@
 """
-LLM handler: supports OpenAI (GPT-4o) and Anthropic (Claude) with live
-telemetry context injection.
-
-Provider selection:
-  - Set LLM_PROVIDER=anthropic (or openai) explicitly, **or**
-  - The handler auto-detects: if ANTHROPIC_API_KEY is set it uses Claude,
-    otherwise it falls back to OpenAI.
+LLM handler: uses Anthropic (Claude) with live telemetry context injection.
 """
 
 import logging
@@ -15,37 +9,17 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-# ─── API keys ─────────────────────────────────────────────────────────────────
-OPENAI_API_KEY    = os.getenv("OPENAI_API_KEY", "")
+# ─── API key ──────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-# ─── Provider selection ───────────────────────────────────────────────────────
-_explicit_provider = os.getenv("LLM_PROVIDER", "").lower()
-if _explicit_provider in ("anthropic", "claude"):
-    LLM_PROVIDER = "anthropic"
-elif _explicit_provider in ("openai", "gpt"):
-    LLM_PROVIDER = "openai"
-else:
-    # Auto-detect: prefer Anthropic when its key is present
-    LLM_PROVIDER = "anthropic" if ANTHROPIC_API_KEY else "openai"
-
-# ─── Model defaults ──────────────────────────────────────────────────────────
-_DEFAULT_MODELS = {
-    "openai":    "gpt-4o",
-    "anthropic": "claude-3-5-haiku-20241022",
-}
-LLM_MODEL = os.getenv("LLM_MODEL", _DEFAULT_MODELS[LLM_PROVIDER])
+# ─── Model ────────────────────────────────────────────────────────────────────
+LLM_MODEL = os.getenv("LLM_MODEL", "claude-3-5-haiku-20241022")
 
 # ─── Startup validation ──────────────────────────────────────────────────────
-logger.info("LLM config: provider=%s  model=%s", LLM_PROVIDER, LLM_MODEL)
-if LLM_PROVIDER == "anthropic" and not ANTHROPIC_API_KEY:
+logger.info("LLM config: provider=anthropic  model=%s", LLM_MODEL)
+if not ANTHROPIC_API_KEY:
     logger.warning(
-        "LLM provider is 'anthropic' but ANTHROPIC_API_KEY is not set. "
-        "Set it in your .env file or export it as an environment variable."
-    )
-if LLM_PROVIDER == "openai" and not OPENAI_API_KEY:
-    logger.warning(
-        "LLM provider is 'openai' but OPENAI_API_KEY is not set. "
+        "ANTHROPIC_API_KEY is not set. "
         "Set it in your .env file or export it as an environment variable."
     )
 
@@ -61,32 +35,6 @@ SYSTEM_PROMPT = (
     "report it IMMEDIATELY, even if the driver asked about something else. "
     "5) Never break character. Never say you are an AI. You ARE the race engineer."
 )
-
-
-# ─── OpenAI backend ──────────────────────────────────────────────────────────
-async def _openai_chat(user_content: str) -> str:
-    payload = {
-        "model": LLM_MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user",   "content": user_content},
-        ],
-        "temperature": 0.7,
-        "max_tokens":  300,
-    }
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type":  "application/json",
-            },
-            json=payload,
-        )
-        response.raise_for_status()
-        data = response.json()
-        return data["choices"][0]["message"]["content"].strip()
 
 
 # ─── Anthropic backend ───────────────────────────────────────────────────────
@@ -120,18 +68,13 @@ async def _anthropic_chat(user_content: str) -> str:
 # ─── Public entry point ──────────────────────────────────────────────────────
 async def get_engineer_response(driver_message: str, telemetry_context: str) -> str:
     """
-    Send the driver's transcribed message + live telemetry snapshot to the LLM.
+    Send the driver's transcribed message + live telemetry snapshot to Claude.
     Returns the engineer's text reply.
     """
-    if LLM_PROVIDER == "anthropic" and not ANTHROPIC_API_KEY:
+    if not ANTHROPIC_API_KEY:
         raise ValueError(
             "ANTHROPIC_API_KEY is not set. Add it to your .env file "
             "(e.g. ANTHROPIC_API_KEY=sk-ant-...) and restart the server."
-        )
-    if LLM_PROVIDER == "openai" and not OPENAI_API_KEY:
-        raise ValueError(
-            "OPENAI_API_KEY is not set. Add it to your .env file "
-            "(e.g. OPENAI_API_KEY=sk-...) and restart the server."
         )
 
     user_content = (
@@ -139,8 +82,6 @@ async def get_engineer_response(driver_message: str, telemetry_context: str) -> 
         f"[LIVE TELEMETRY]\n{telemetry_context}"
     )
 
-    logger.info("LLM provider=%s  model=%s", LLM_PROVIDER, LLM_MODEL)
+    logger.info("LLM provider=anthropic  model=%s", LLM_MODEL)
 
-    if LLM_PROVIDER == "anthropic":
-        return await _anthropic_chat(user_content)
-    return await _openai_chat(user_content)
+    return await _anthropic_chat(user_content)
