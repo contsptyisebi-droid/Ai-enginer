@@ -223,12 +223,12 @@ def parse_car_status(data: bytes, player_idx: int) -> Optional[dict]:
 
 
 # ─── Car Damage (Packet ID = 10) ─────────────────────────────────────────────
-# Per car: 4f 4B 4B B B B B B B B B B B B B B B B B B B
+# Per car (F1 25 spec): 4f 4B 4B BBBBBBBBBBBBBBBB
 # tyresWear[4](16) tyresDamage[4](4) brakesDamage[4](4)
 # frontLeftWing(1) frontRightWing(1) rearWing(1) floor(1) diffuser(1)
-# sidepod(1) drsFault(1) ersFault(1) gearBox(1) engine(1)
+# sidepod(1) drsFault(1) ersEnergyStoreHealth(1) gearBox(1) engine(1)
 # engineMGUH(1) engineES(1) engineCE(1) engineICE(1) engineMGUK(1)
-# engineTC(1) engineBlown(1) engineSeized(1)
+# engineTC(1)
 # = 40 bytes per car
 CAR_DAMAGE_FORMAT = "<4f4B4BBBBBBBBBBBBBBBBB"
 CAR_DAMAGE_SIZE   = struct.calcsize(CAR_DAMAGE_FORMAT)  # 40
@@ -241,27 +241,25 @@ def parse_car_damage(data: bytes, player_idx: int) -> Optional[dict]:
         return None
     u = struct.unpack_from(CAR_DAMAGE_FORMAT, data, entry_offset)
     return {
-        "tyresWear":          list(u[0:4]),    # [RL, RR, FL, FR] 0-100%
-        "tyresDamage":        list(u[4:8]),    # [RL, RR, FL, FR] 0-100%
-        "brakesDamage":       list(u[8:12]),   # [RL, RR, FL, FR] 0-100%
-        "frontLeftWingDmg":   u[12],
-        "frontRightWingDmg":  u[13],
-        "rearWingDmg":        u[14],
-        "floorDmg":           u[15],
-        "diffuserDmg":        u[16],
-        "sidepodDmg":         u[17],
-        "drsFault":           u[18],
-        "ersFault":           u[19],
-        "gearBoxDmg":         u[20],
-        "engineDmg":          u[21],
-        "engineMGUHWear":     u[22],
-        "engineESWear":       u[23],
-        "engineCEWear":       u[24],
-        "engineICEWear":      u[25],
-        "engineMGUKWear":     u[26],
-        "engineTCWear":       u[27],
-        "engineBlown":        u[28],
-        "engineSeized":       u[29],
+        "tyresWear":              list(u[0:4]),    # [RL, RR, FL, FR] 0-100%
+        "tyresDamage":            list(u[4:8]),    # [RL, RR, FL, FR] 0-100%
+        "brakesDamage":           list(u[8:12]),   # [RL, RR, FL, FR] 0-100%
+        "frontLeftWingDmg":       u[12],
+        "frontRightWingDmg":      u[13],
+        "rearWingDmg":            u[14],
+        "floorDmg":               u[15],
+        "diffuserDmg":            u[16],
+        "sidepodDmg":             u[17],
+        "drsFault":               u[18],           # 0=OK, 1=stuck open, 2=stuck closed
+        "ersEnergyStoreHealth":   u[19],           # 0-100%
+        "gearBoxDmg":             u[20],
+        "engineDmg":              u[21],
+        "engineMGUHWear":         u[22],
+        "engineESWear":           u[23],
+        "engineCEWear":           u[24],
+        "engineICEWear":          u[25],
+        "engineMGUKWear":         u[26],
+        "engineTCWear":           u[27],
     }
 
 
@@ -314,11 +312,15 @@ class CarState:
     sidepod_dmg:          int   = 0
     gearbox_dmg:          int   = 0
     engine_dmg:           int   = 0
-    engine_blown:         bool  = False
-    engine_seized:        bool  = False
-    drs_fault:            bool  = False
-    ers_fault:            bool  = False
+    drs_fault:            int   = 0     # 0=OK, 1=stuck open, 2=stuck closed
+    ers_energy_store_health: int = 100  # 0-100%
     brakes_damage:        list  = field(default_factory=lambda: [0, 0, 0, 0])
+    engine_mguh_wear:     int   = 0
+    engine_es_wear:       int   = 0
+    engine_ce_wear:       int   = 0
+    engine_ice_wear:      int   = 0
+    engine_mguk_wear:     int   = 0
+    engine_tc_wear:       int   = 0
 
     # Live driving
     speed_kmh:            int   = 0
@@ -335,39 +337,54 @@ class CarState:
     def to_context_string(self) -> str:
         """Return a compact telemetry snapshot for injecting into the LLM prompt."""
         wear = self.tyre_wear
+        dmg = self.tyre_damage
         surf_temp = self.tyre_surface_temp
         labels = ["RL", "RR", "FL", "FR"]
         wear_str = ", ".join(f"{labels[i]}:{wear[i]:.1f}%" for i in range(4))
+        dmg_str = ", ".join(f"{labels[i]}:{dmg[i]}%" for i in range(4))
         temp_str = ", ".join(f"{labels[i]}:{surf_temp[i]}°C" for i in range(4))
         brakes_str = ", ".join(f"{labels[i]}:{self.brakes_damage[i]}%" for i in range(4))
 
         ers_pct = (self.ers_store_energy / 4_000_000 * 100) if self.ers_store_energy > 0 else 0.0
 
+        drs_fault_str = {0: "OK", 1: "Stuck Open", 2: "Stuck Closed"}.get(self.drs_fault, "Unknown")
+
         lines = [
             f"Position: P{self.position} | Lap: {self.current_lap}",
             f"Tyre: {self.tyre_name} | Age: {self.tyre_age_laps} laps",
             f"Tyre Wear: {wear_str}",
+            f"Tyre Damage: {dmg_str}",
             f"Tyre Surface Temps: {temp_str}",
             f"Fuel: {self.fuel_in_tank:.2f}kg | Fuel Remaining: {self.fuel_remaining_laps:.2f} laps | Mix: {self.fuel_mix}",
-            f"ERS: {ers_pct:.1f}% | Mode: {self.ers_deploy_mode}",
+            f"ERS: {ers_pct:.1f}% | Mode: {self.ers_deploy_mode} | ERS Health: {self.ers_energy_store_health}%",
             f"Speed: {self.speed_kmh} km/h | Gear: {self.gear} | RPM: {self.engine_rpm}",
-            f"DRS: {'ON' if self.drs_active else 'OFF'} | DRS Allowed: {'Yes' if self.drs_allowed else 'No'}",
-            f"Engine Temp: {self.engine_temp}°C | Engine Dmg: {self.engine_dmg}% | Blown: {self.engine_blown}",
+            f"DRS: {'ON' if self.drs_active else 'OFF'} | DRS Allowed: {'Yes' if self.drs_allowed else 'No'} | DRS Fault: {drs_fault_str}",
+            f"Engine Temp: {self.engine_temp}°C | Engine Dmg: {self.engine_dmg}%",
+            f"Engine Wear - MGUH: {self.engine_mguh_wear}% ES: {self.engine_es_wear}% CE: {self.engine_ce_wear}% ICE: {self.engine_ice_wear}% MGUK: {self.engine_mguk_wear}% TC: {self.engine_tc_wear}%",
             f"Wing Dmg - FL: {self.front_left_wing_dmg}% FR: {self.front_right_wing_dmg}% Rear: {self.rear_wing_dmg}%",
+            f"Floor Dmg: {self.floor_dmg}% | Diffuser Dmg: {self.diffuser_dmg}% | Sidepod Dmg: {self.sidepod_dmg}%",
             f"Brakes Dmg: {brakes_str}",
             f"Gearbox Dmg: {self.gearbox_dmg}% | Pit Stops: {self.num_pit_stops}",
             f"Penalties: {self.penalties_sec}s | Warnings: {self.total_warnings}",
             f"Flag: {self.fia_flag} | Lap Invalid: {self.current_lap_invalid}",
             f"Delta to Leader: {self.delta_to_leader_ms / 1000:.3f}s | Delta to Car Ahead: {self.delta_to_front_ms / 1000:.3f}s",
         ]
-        if self.engine_blown:
-            lines.append("⚠ ENGINE BLOWN")
-        if self.engine_seized:
-            lines.append("⚠ ENGINE SEIZED")
-        if self.drs_fault:
-            lines.append("⚠ DRS FAULT")
-        if self.ers_fault:
-            lines.append("⚠ ERS FAULT")
+
+        # Critical warnings
+        if any(w > 80 for w in self.tyre_wear):
+            lines.append("⚠ CRITICAL TYRE WEAR (>80%)")
+        if any(d > 50 for d in self.tyre_damage):
+            lines.append("⚠ HIGH TYRE DAMAGE")
+        if self.drs_fault != 0:
+            lines.append(f"⚠ DRS FAULT: {drs_fault_str}")
+        if self.ers_energy_store_health < 50:
+            lines.append(f"⚠ LOW ERS HEALTH: {self.ers_energy_store_health}%")
+        if self.engine_dmg > 50:
+            lines.append(f"⚠ HIGH ENGINE DAMAGE: {self.engine_dmg}%")
+        if any(v > 80 for v in [self.floor_dmg, self.diffuser_dmg, self.sidepod_dmg,
+                                self.front_left_wing_dmg, self.front_right_wing_dmg, self.rear_wing_dmg]):
+            lines.append("⚠ HEAVY AERO DAMAGE")
+
         return "\n".join(lines)
 
 
@@ -463,10 +480,14 @@ class TelemetryListener:
                     s.sidepod_dmg          = parsed["sidepodDmg"]
                     s.gearbox_dmg          = parsed["gearBoxDmg"]
                     s.engine_dmg           = parsed["engineDmg"]
-                    s.engine_blown         = bool(parsed["engineBlown"])
-                    s.engine_seized        = bool(parsed["engineSeized"])
-                    s.drs_fault            = bool(parsed["drsFault"])
-                    s.ers_fault            = bool(parsed["ersFault"])
+                    s.drs_fault            = parsed["drsFault"]
+                    s.ers_energy_store_health = parsed["ersEnergyStoreHealth"]
+                    s.engine_mguh_wear     = parsed["engineMGUHWear"]
+                    s.engine_es_wear       = parsed["engineESWear"]
+                    s.engine_ce_wear       = parsed["engineCEWear"]
+                    s.engine_ice_wear      = parsed["engineICEWear"]
+                    s.engine_mguk_wear     = parsed["engineMGUKWear"]
+                    s.engine_tc_wear       = parsed["engineTCWear"]
 
     def _listen_loop(self) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
