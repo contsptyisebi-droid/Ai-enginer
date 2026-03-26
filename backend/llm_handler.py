@@ -50,16 +50,38 @@ async def _anthropic_chat(user_content: str) -> str:
     }
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key":         ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type":      "application/json",
-            },
-            json=payload,
-        )
-        response.raise_for_status()
+        try:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key":         ANTHROPIC_API_KEY,
+                    "anthropic-version": "2023-06-01",
+                    "content-type":      "application/json",
+                },
+                json=payload,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status = exc.response.status_code
+            try:
+                body = exc.response.json()
+                detail = body.get("error", {}).get("message", exc.response.text)
+            except Exception:
+                detail = exc.response.text
+            logger.error("Anthropic API error %d: %s", status, detail)
+            if status == 401:
+                raise ValueError(
+                    "Anthropic API key is invalid or expired. "
+                    "Check your ANTHROPIC_API_KEY in the .env file."
+                ) from exc
+            if status == 429:
+                raise ValueError(
+                    "Anthropic rate limit exceeded. Please wait a moment and try again."
+                ) from exc
+            raise ValueError(
+                f"Anthropic API error ({status}). Please check your configuration and try again."
+            ) from exc
+
         data = response.json()
         # Anthropic returns content as a list of blocks
         return data["content"][0]["text"].strip()

@@ -320,7 +320,16 @@ async function stopRecording() {
 
   } catch (err) {
     console.error('Voice API error:', err);
-    engineerReplyEl.textContent = '⚠ Communication error – check API key.';
+    const msg = err.message || '';
+    let displayMsg = 'Communication error – check API key.';
+    if (msg.includes('Server error')) {
+      try {
+        const jsonPart = msg.substring(msg.indexOf('{'));
+        const parsed = JSON.parse(jsonPart);
+        if (parsed.detail) displayMsg = parsed.detail;
+      } catch { /* use default */ }
+    }
+    engineerReplyEl.textContent = '⚠ ' + displayMsg;
     setRadioState('STANDBY');
   }
 }
@@ -336,19 +345,30 @@ pttBtn.addEventListener('pointerdown',  (e) => { e.preventDefault(); startRecord
 pttBtn.addEventListener('pointerup',    (e) => { e.preventDefault(); stopRecording();  });
 pttBtn.addEventListener('pointerleave', (e) => { if (isRecording) stopRecording();     });
 
-// Keyboard shortcut: Space bar
+// Keyboard shortcut: Space bar (and backtick ` as alternative for when game uses Space)
 window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && !e.repeat && !isRecording) {
+  if ((e.code === 'Space' || e.code === 'Backquote') && !e.repeat && !isRecording) {
     e.preventDefault();
     startRecording();
   }
 });
 window.addEventListener('keyup', (e) => {
-  if (e.code === 'Space' && isRecording) {
+  if ((e.code === 'Space' || e.code === 'Backquote') && isRecording) {
     e.preventDefault();
     stopRecording();
   }
 });
+
+// ─── Focus detection ──────────────────────────────────────────────────────────
+const focusWarning = document.getElementById('focus-warning');
+function updateFocusWarning() {
+  if (focusWarning) {
+    focusWarning.style.display = (document.hidden || !document.hasFocus()) ? 'block' : 'none';
+  }
+}
+document.addEventListener('visibilitychange', updateFocusWarning);
+window.addEventListener('blur', updateFocusWarning);
+window.addEventListener('focus', updateFocusWarning);
 
 // ─── Live telemetry polling ───────────────────────────────────────────────────
 async function pollTelemetry() {

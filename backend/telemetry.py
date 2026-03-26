@@ -80,8 +80,8 @@ def parse_header(data: bytes) -> Optional[dict]:
 
 
 # ─── Lap Data (Packet ID = 2) ─────────────────────────────────────────────────
-# 22 cars, each LapData entry (F1 2024/25 spec):
-# I I H B H B H B H B f f f B B B B B b B B B B B B B B H H B f B
+# 22 cars, each LapData entry (F1 25 spec):
+# I I H B H B H B H B f f f B B B B B B B B B B B B B B B H H B f B
 # lastLapMs(4) currLapMs(4) sec1Ms(2) sec1Min(1) sec2Ms(2) sec2Min(1)
 # deltaFrontMs(2) deltaFrontMin(1) deltaLeaderMs(2) deltaLeaderMin(1)
 # lapDist(4) totalDist(4) safetyCarDelta(4)
@@ -89,9 +89,9 @@ def parse_header(data: bytes) -> Optional[dict]:
 # penalties(1) warnings(1) cornCutWarn(1) dtPens(1) sgPens(1)
 # gridPos(1) driverStatus(1) resultStatus(1) pitTimerActive(1)
 # pitLaneMs(2) pitStopMs(2) pitServePen(1) speedTrap(4) speedTrapLap(1)
-# = 56 bytes
-LAP_DATA_FORMAT = "<IIHBHBHBHBfffBBBBBbBBBBBBBBHHBfB"
-LAP_DATA_SIZE   = struct.calcsize(LAP_DATA_FORMAT)  # 56
+# = 57 bytes
+LAP_DATA_FORMAT = "<IIHBHBHBHBfffBBBBBBBBBBBBBBBHHBfB"
+LAP_DATA_SIZE   = struct.calcsize(LAP_DATA_FORMAT)  # 57
 
 
 def parse_lap_data(data: bytes, player_idx: int) -> Optional[dict]:
